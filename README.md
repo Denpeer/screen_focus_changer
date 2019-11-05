@@ -1,4 +1,5 @@
-
+Forked and adjusted for 3 monitor setup
+Behaviour changed to left**most**, right**most** or middle screen.
 
 can be useful to create a shortcut that allows you to switch between monitors / screens
 

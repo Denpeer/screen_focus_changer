@@ -3,6 +3,7 @@ from enum import Enum
 from locale import atoi
 from typing import List, Dict, Any
 import subprocess
+import math
 
 """
 usage:
@@ -22,6 +23,7 @@ class MovementDirection(Enum):
     SWITCH = "switch"
     LEFT = "left"
     RIGHT = "right"
+    MIDDLE = "middle"
 
 
 def get_current_windows_position() -> Dict[str, int]:
@@ -30,7 +32,8 @@ def get_current_windows_position() -> Dict[str, int]:
     """
     active_windows = subprocess.getoutput("xdotool getactivewindow")
     lines = subprocess.getoutput("xdotool getwindowgeometry " + active_windows).split("\n")[1:]
-    x, y = {atoi(x.replace(" (screen", "")) for x in lines[0].split(": ")[1].split(",")}
+    # subprocess.getoutput("zenity --info --text =deb=\"{}\"".format(str(lines[0].split(": ")[1]).replace(" "," ")))
+    x, y = [int(x.replace(" (screen", "")) for x in lines[0].split(": ")[1].split(",")]
     position = {"x": x, "y": y}
     return position
 
@@ -67,16 +70,27 @@ def get_all_monitors() -> List[Dict[str, Any]]:
 
 
 def get_current_monitor_pos(monitors: List[Dict[str, Any]], pos: Dict[str, int]) -> int:
+    # subprocess.getoutput("zenity --info --text =deb={}".format(str(pos).replace(" ","")))
     for i in range(len(monitors)):
         if monitors[i]["ho"] <= pos["x"] < monitors[i]["hr"] + monitors[i]["ho"]:
             return i
 
+# def determine_monitor_to_move(mov: MovementDirection, current_pos: int, n_monitors: int) -> int:
+#     if mov == MovementDirection.LEFT:
+#         return current_pos - 1 if current_pos > 0 else 0
+#     if mov == MovementDirection.RIGHT:
+#         return current_pos + 1 if current_pos < n_monitors - 1 else n_monitors - 1
+#     return 0 if current_pos == 1 else 1
 
 def determine_monitor_to_move(mov: MovementDirection, current_pos: int, n_monitors: int) -> int:
+    """hardcoded for 3 monitor setup
+    Behaviour changed to: leftmost, rightmost and middle"""
     if mov == MovementDirection.LEFT:
-        return current_pos - 1 if current_pos > 0 else 0
+        return 0
     if mov == MovementDirection.RIGHT:
-        return current_pos + 1 if current_pos < n_monitors - 1 else n_monitors - 1
+        return n_monitors - 1
+    if mov == MovementDirection.MIDDLE:
+        return math.ceil(n_monitors/2) - 1
     return 0 if current_pos == 1 else 1
 
 
@@ -95,12 +109,14 @@ def change_monitor_focus(mov: MovementDirection) -> int:
     if new_monitor_pos == current_monitor_pos:
         return new_monitor_pos
     center_of_screen = get_center_of_monitor(monitors[new_monitor_pos])
-    query_get_window_at = "xdotool mousemove {} {} getmouselocation --shell mousemove restore & echo $WINDOW ".format(
+    query_get_window_at = "xdotool mousemove {} {} getmouselocation --shell mousemove restore & echo $WINDOW".format(
         center_of_screen["x"],
         center_of_screen["y"]
     )
+
     window_id = subprocess.getoutput(query_get_window_at).split("WINDOW=")[1]
     subprocess.getoutput("xdotool windowactivate {}".format(window_id))
+
 
 
 def get_args() -> MovementDirection:
@@ -111,6 +127,8 @@ def get_args() -> MovementDirection:
         return MovementDirection.RIGHT
     elif mov == MovementDirection.LEFT.value:
         return MovementDirection.LEFT
+    elif mov == MovementDirection.MIDDLE.value:
+        return MovementDirection.MIDDLE
     return MovementDirection.SWITCH
 
 
